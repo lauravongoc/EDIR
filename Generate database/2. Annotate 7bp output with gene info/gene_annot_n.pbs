@@ -1,0 +1,50 @@
+#!/bin/bash
+
+#PBS -l walltime=24:00:00
+#PBS -l nodes=1:ppn=24
+#PBS -N annotate_16384
+
+module load R/3.6.0-foss-2019a
+module load R-bundle-Bioconductor/3.9-foss-2019a-R-3.6.0
+# module load Biopython/1.73-foss-2019a
+# module load SCOOP/0.7.1.1-GCCcore-8.2.0
+
+echo -- Modules --
+ml
+echo
+
+
+cd $PBS_O_WORKDIR
+
+echo submit directory: $PWD
+echo jobid: $PBS_JOBID
+echo hostname: $HOSTNAME
+echo
+date
+echo -- Start Job --
+chmod  -R 775 ../../genRepeats
+
+# Initialize output directories
+outdir="../Output/geneAnnotate"
+outdirsum="../Output/geneAnnotate/summary"
+
+# Create directory if don't exist
+mkdir -p "$outdir"
+mkdir -p "$outdirsum"
+
+# User modifiable parameters
+input="../Output/seqFind"
+
+Rscript ./geneAnnotate/geneAnnotate_optimized.R $input
+
+# Generate "1000-header.tsv" file in summary directory
+echo "sequence"$'\t'"abs_freq"$'\t'"genes"$'\t'"mend_freq"$'\t'"mendeliome"$'\t'"fullGenelist"$'\t'"mendeliomeGenes"$'\n' \
+"sequence"$'\t'"abs_freq"$'\t'"genes"$'\t'"mend_freq"$'\t'"mendeliome"$'\t'"fullGenelist"$'\t'"mendeliomeGenes" >> "../Output/geneAnnotate/summary/1000-header.tsv"
+
+# Concatenate all summary results without first line of each file
+awk FNR-1 "$outdirsum"
+
+echo
+echo -- End Job --
+date
+echo

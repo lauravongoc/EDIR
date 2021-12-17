@@ -1,0 +1,35 @@
+#!/bin/bash
+
+#PBS -l walltime=01:00:00
+#PBS -l nodes=1:ppn=8
+#PBS -N repeatsmiss_16384
+
+module load R/3.6.0-foss-2019a
+module load Biopython/1.73-foss-2019a
+module load SCOOP/0.7.1.1-GCCcore-8.2.0
+
+echo -- Modules --
+ml
+echo
+
+
+cd $PBS_O_WORKDIR
+
+echo submit directory: $PWD
+echo jobid: $PBS_JOBID
+echo hostname: $HOSTNAME
+echo
+date
+echo -- Start Job --
+chmod  -R 775 ../../genRepeats
+
+# User modifiable parameters
+input="./seqFind/Input/all_sequences_length_7bp.txt"
+dist=1000
+
+python3 -m scoop ./seqFind/find_seq_element_occurrences_in_seq.py $input $dist
+
+echo
+echo -- End Job --
+date
+echo

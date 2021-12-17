@@ -1,0 +1,50 @@
+#!/bin/bash
+
+#PBS -l walltime=18:00:00
+#PBS -l nodes=1:ppn=24
+#PBS -N feature_1-2
+
+module load R/3.6.0-foss-2019a
+module load R-bundle-Bioconductor/3.9-foss-2019a-R-3.6.0
+# module load Biopython/1.73-foss-2019a
+# module load SCOOP/0.7.1.1-GCCcore-8.2.0
+
+echo -- Modules --
+ml
+echo
+
+
+cd $PBS_O_WORKDIR
+
+echo submit directory: $PWD
+echo jobid: $PBS_JOBID
+echo hostname: $HOSTNAME
+echo
+date
+echo -- Start Job --
+chmod -R 775 ../Genome-repeats
+
+# Initialize output directories
+outdir="../Output/expandSeq/annot"
+outdirsum="../Output/expandSeq/summary"
+
+# Create directory if don't exist
+mkdir -p "$outdir"
+mkdir -p "$outdirsum"
+
+# User modifiable parameters
+input="../Output/expandSeq/expand1"
+
+# Run script
+Rscript ./geneAnnotate/geneAnnotate_features.R $input $outdir $outdirsum
+
+# Generate "1000-header.tsv" file in summary directory
+echo "repeat_length"$'\t'"sequence"$'\t'"abs_freq"$'\t'"genes"$'\t'"mend_freq"$'\t'"mendeliome"$'\t'"fullGenelist"$'\t'"mendeliomeGenes"$'\n' \
+"repeat_length"$'\t'"sequence"$'\t'"abs_freq"$'\t'"genes"$'\t'"mend_freq"$'\t'"mendeliome"$'\t'"fullGenelist"$'\t'"mendeliomeGenes" >> "../Output/expandSeq/summary/1000-header.tsv"
+
+
+
+echo
+echo -- End Job --
+date
+echo
