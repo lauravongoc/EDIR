@@ -21,8 +21,8 @@
 # ---------------- INITIALIZE ----------------
 # ********************************************
 
-# Set path of file location
-path <- 
+# Set path of directory location
+path <- "path/to/directory"
 
 # Load required libraries and function
 source(paste0(path, "/repeats_functions.R"))
