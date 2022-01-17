@@ -22,7 +22,7 @@
 # ********************************************
 
 # Set path of file location
-path <- "C:/Users/rockp/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu18.04onWindows_79rhkp1fndgsc/LocalState/rootfs/home/laura/genRepeats/Genome-repeats/Repeats"
+path <- 
 
 # Load required libraries and function
 source(paste0(path, "/repeats_functions.R"))
@@ -71,7 +71,6 @@ source(paste0(path, "/repeats_functions.R"))
 gene_lookup("GAA", length = 7, mindist = 10, maxdist = 1000)
 gene_lookup("GLA", mindist = 10, maxdist = 1000)
 gene_lookup("GBA", length = 20, mindist = 10, maxdist = 1000)
-gene_lookup("GAA", length = 20, mindist = 10, maxdist = 1000)
 gene_lookup("gaa", length = 10, mindist = 10, maxdist = 1000)
 gene_lookup("GAA", length = 7, mindist = 400, maxdist = 500)
 
