@@ -1,13 +1,13 @@
 # EDIR -- Exome Database of Interspersed Repeats
 
 
-EDIR is dataset for interspersed repeats in coding regions of the human genome. These are defined by two short, identical, repeated sequences (7-20 bp) separated by a maximum of 1000 bp from one another, and filtered by those with at least one repeat within an exon, or both in introns flanking an exon. The database can be queried using the function and files in the `Query database` directory.
+EDIR a is dataset for interspersed repeats in coding regions of the human genome. These are defined by two short, identical, repeated sequences (7-20 bp) separated by a maximum of 1000 bp from one another, and filtered by those with at least one repeat within an exon, or both in introns flanking an exon. The database can be queried using the function and files in the `Query database` directory.
 
 
 ---
 ## Query database
 #### Download and usage 
-* Download the contents of "Query database" directory (1.54 GB). Make sure all files are in the **same directory**!
+* Download the contents of `Query database` directory (1.54 GB). Make sure all files are in the ***same directory***!
 * `repeat_USE.R` -- contains init for querying the database and usage example
    1. Set the `path` variable (line 25) with the directory
    2. Run `source()` (line 28)
@@ -44,7 +44,7 @@ If `summary` is TRUE
 ---
 ## Generate database
 This directory contains the main scripts and input used to generate the EDIR database. These are divided into 5 steps in the pipeline:
-1. Input setup
+1. Input and related setup
    * Ensembl reference *Homo sapiens* genome (GRCh38) from [Ensembl](ftp://ftp.ensembl.org/pub/release-94/fasta/homo_sapiens/dna/)
    * [UCSC Known canonical transcripts](http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/)
    * Gene and transcript information from [BiomaRt](https://bioconductor.org/packages/release/bioc/html/biomaRt.html)
@@ -53,6 +53,9 @@ This directory contains the main scripts and input used to generate the EDIR dat
 6. Expand to 8-20bp and annotate
 7. Filter data
 
+---
+## Cite
+* [ insert citing information ]
 ---
 ## Contact
 DT Laura Vo Ngoc doan.vongoc@vub.be
