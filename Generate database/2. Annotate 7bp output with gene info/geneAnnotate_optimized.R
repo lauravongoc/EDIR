@@ -4,7 +4,7 @@
 # Part of the pipeline used to generate the EDIR database
 # 
 #*******************************************************************************
-# Written initially in R 3.5.0 Joy in Playing
+# Written initially in R 4.1.3 One Push-Up
 #
 # PURPOSE: Takes input sequences and chromosomal positions, and annotates gene ID,
 #       transcript, and intron/exon number. Pairs of identical repeat sequences are 
@@ -12,7 +12,6 @@
 #       and exon, or flanking an intron or exon. Then only pairs not in the same intron
 #       are retained.
 # 
-# A summary output is also generated.
 #
 
 # Written to run from command line, parallized.
@@ -39,10 +38,15 @@ if (length(args)==0) {
     stop("At least one argument must be supplied (input directory name).", call.=FALSE)
 }
 
+outfile <- "../Output/"
 
 # **********************************
 # --- LIBRARIES, REFERENCE DATA ----
 # **********************************
+
+# Set working directory, source files defining functions used
+# setwd("C:/Users/rockp/AppData/Local/Packages/CanonicalGroupLimited.Ubuntu18.04onWindows_79rhkp1fndgsc/LocalState/rootfs/home/laura/genRepeats/Genome-repeats")
+
 
 # Check that required packages are installed
 if (!suppressMessages(suppressWarnings(require("BiocManager")))) install.packages("BiocManager")
@@ -50,19 +54,19 @@ if (!suppressMessages(suppressWarnings(require("GenomicRanges")))) BiocManager::
 if (!suppressMessages(suppressWarnings(require("dplyr")))) install.packages("dplyr")
 if (!suppressMessages(suppressWarnings(require("doParallel")))) install.packages("doParallel")
 if (!suppressMessages(suppressWarnings(require("foreach")))) install.packages("foreach")
+if (!suppressMessages(suppressWarnings(require("stringdist")))) install.packages("stringdist")
 
 # Load libraries
 suppressMessages(suppressWarnings(library("GenomicRanges")))         # v.1.11.18
 suppressMessages(suppressWarnings(library("dplyr")))                 # v.0.8.1
 suppressMessages(suppressWarnings(library("doParallel")))            # v.1.0.15
 suppressMessages(suppressWarnings(library("foreach")))               # v.1.4.7
+suppressMessages(suppressWarnings(library("stringdist")))            # v.0.9.8
 
 # Load reference data
 gr.intex <- readRDS("./geneAnnotate/Data_input/refgenomeAllGR.rds")
 
-# mendeliome = list of genes in the Mendeliome
-load("./geneAnnotate/Data_input/mendeliome_gene_list.RData")
-
+# Predefine a minimum distance to retain
 mindist <- 0
 
 
@@ -70,29 +74,26 @@ mindist <- 0
 # ---------- LOAD DATA TO ANNOTATE ----------
 # ********************************************
 
-# genfiles <- list.files("../Output/seqFind/")
+# genfiles <- list.files("../Output/Homo_sapiens/")
 genfiles <- list.files(args)
 
 # Set parallelization parameters
-cl <- parallel::makeCluster(Sys.getenv("PBS_NP"))
-registerDoParallel(cores = Sys.getenv("PBS_NP"))
+# Obtain number of cores allocated to the job
+ncore = future::availableCores()
+# set number of processes equal to number of cores
+registerDoParallel(ncore)
 
+# For each file
 para <- foreach (i = 1:length(genfiles)) %dopar% {
     worker <- Sys.getpid()
     
     # Load input
     genfile <- genfiles[i]
-    seqfind <- as.data.frame(read.table(paste("../Output/seqFind/", genfile, sep=""), header=TRUE, stringsAsFactors=FALSE))
-    
-    # FORMAT DATA FOR ANALYSIS
-    # Change strand to * to omit filters on strand
-    seqfind$strand <- "*"
-
-    # Change colnames  
-    colnames(seqfind)[1] <- "repeat_seq"
-    
-    # Convert to GRanges object
-    gr.seqfind <- makeGRangesFromDataFrame(seqfind,
+    print(genfile)
+    seqfind <- as.data.frame(read.table(paste(args, genfile, sep="/"), header=TRUE, stringsAsFactors=FALSE))
+   
+    # Convert to Granges
+    annot.all <- makeGRangesFromDataFrame(seqfind,
                                            keep.extra.columns=TRUE,
                                            ignore.strand=FALSE,
                                            seqinfo=NULL,
@@ -100,8 +101,8 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
                                                             "chromosome", "chrom",
                                                             "chr", "chromosome_name",
                                                             "seqid"),
-                                           start.field="start_pos",
-                                           end.field=c("end_pos", "stop"),
+                                           start.field="start",
+                                           end.field=c("end", "stop"),
                                            strand.field="strand",
                                            starts.in.df.are.0based=FALSE)
     
@@ -109,10 +110,10 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
     # INITIALIZE OTHER VARIABLES
     # Set distance between instances
     maxdist <- as.integer(strsplit(strsplit(genfile,'[.]')[[1]][2], "bp")[[1]][1])
+    
     # Get repeat seq
     repeat.seq <- strsplit(genfile,'[_]')[[1]][1]
     repeat.len <- nchar(repeat.seq)
-    
     print(repeat.seq, quote = F)
     
     
@@ -121,8 +122,9 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
     # ********************************************
     
     # Find overlaps between seqFind output and reference genmome
-    annot.all <- subsetByOverlaps(gr.seqfind, gr.intex)
+    # annot.all <- subsetByOverlaps(gr.seqfind, gr.intex)
     overlap.all <- findOverlaps(annot.all, gr.intex)
+
     
     # Initialize some column name groups
     info <- c("ensembl_gene_id", "hgnc_symbol")
@@ -150,7 +152,6 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
     results <- results[,-4]
     results <- results[,c(5,2:4,1,6:12)]
     colnames(results)[5] <- "chromosome"
-    
 
 
     # ****************************************
@@ -166,7 +167,7 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
     
     for (j in 1:nrow(results)) {
         # print(i)
-    # for (i in 1:10) {
+    # for (j in 1:1000) {
         k <- j+1
         
         # Get row
@@ -174,13 +175,14 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
         
         # While k within df; same repeat sequence, same gene
         while(k <= nrow(results) &
-            results$repeat_seq[k] == row$repeat_seq &
-            results$ensembl_gene_id[k] == row$ensembl_gene_id) {
+              results$ensembl_gene_id[k] == row$ensembl_gene_id &
+            stringdist(results$repeat_seq[k], row$repeat_seq)<=1) {
             # print(k)
             row1 <- results[k,]
             
             # Define distance variable
             dist <- row1$start - row$end
+            sdist <- stringdist(row$repeat_seq, row1$repeat_seq)
             
             # If distance within range of interest
             if (dist >= mindist && dist <= maxdist) {
@@ -208,7 +210,7 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
                 # If feature is NOT "same intron" (2)
                 if (feat != 2) {
                     # append row number, distance, and feature of both rows
-                    out <- rbind(out, c(j, dist, feat), c(k, dist, feat))
+                    out <- rbind(out, c(j, dist, feat, sdist), c(k, dist, feat, sdist))
                 }
                 
                 rm(feat)
@@ -217,53 +219,31 @@ para <- foreach (i = 1:length(genfiles)) %dopar% {
             # Increment k
             k <- k+1
             
-        } 
+        }
     }
-    colnames(out) <- c("rownum", "dist", "feat")
+    colnames(out) <- c("rownum", "dist", "feat", "stringdist")
     
     final.res <- results[out$rownum,]
     final.res$distance <- out$dist
     final.res$repeat_length <- 7
-    final.res <- final.res[, c(5, 14, 1:3, 13, 6:12)]
+    final.res$stringdist <- out$stringdist
+    final.res <- final.res[, c(5, 14, 1:3, 13, 6:12, 15)]
     final.res$feature <- features[out$feat]
     rownames(final.res) <- NULL
-
     
     
     # *******************************************************
     # ----- GENERATE OUTPUT, MENDELIOME, SUMMARY TABLES -----
     # *******************************************************
-    final.res <- data.frame(read.table(file="../Output/geneAnnotate/results_repeat_CGGGATC_dist_1000_bp.tsv", sep = "\t", header = T), stringsAsFactors = F)
-    
     
     # Output final.res to results table
     write.table(final.res,
-                paste("../Output/geneAnnotate/n-results_repeat", repeat.seq, "dist", maxdist, "bp.tsv", sep="_"), 
+                # paste("../Output/geneAnnotate/n-results_repeat", repeat.seq, "dist", maxdist, "bp.tsv", sep="_"), 
+                paste(outfile, "geneAnnotate/", genfile, sep=""), 
                 sep="\t", row.names=F, col.names=T, quote=F)
     
-    
-    # Output results in Mendeliome list to a table
-    res.mendeliome <- final.res[which(final.res$hgnc_symbol %in% mendeliome),]
-  
-    
-    # Generate and append summary of all results to summary table
-    # Set condition for whether to include colnames
-    if (file.exists(paste("../Output/geneAnnotate/summary/", worker, "-summary_results.tsv", sep=""))) {
-        headerrowsum <- FALSE
-    } else {
-        headerrowsum <- TRUE
-    }
-    # Generate and append
-    summary <- data.frame(sequence=repeat.seq, 
-                          abs_freq=nrow(final.res), 
-                          genes=length(unique(final.res$hgnc_symbol)), 
-                          mend_freq=nrow(res.mendeliome),
-                          mendeliome=length(unique(res.mendeliome$hgnc_symbol)), 
-                          fullGenelist=paste(unique(final.res$hgnc_symbol), collapse="/"),
-                          mendeliomeGenes=paste(unique(res.mendeliome$hgnc_symbol), collapse="/"))
-    write.table(summary, 
-                paste("../Output/geneAnnotate/summary/", worker, "-summary_results.tsv", sep=""), 
-                sep="\t", row.names=F, col.names=headerrowsum, quote=F, append=T)
+    # Remove input file
+    file.remove(paste(outfile, "Homo_sapiens/", genfile, sep=""))
 }
 parallel::stopCluster(cl)
 

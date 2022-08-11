@@ -27,9 +27,14 @@
 # sequence. If your FASTA file has more than one sequence entry within it and 
 # the one you want to have scanned is not the first, copy and paste it to a new 
 # file and use that as the sequence to scan.
+# 
+# Calls R script checkGene.R to determine whether results fall within known genes.
+# Discards those which do not (to reduce result filesize).
 #
 # Required arguments are a file containing a list of sequences, and an integer
 # denoting maximun distance between occurrences.
+# 
+# Allows for 1-base substitutions in seq.
 # 
 # Written to run from command line 
 #
@@ -37,7 +42,7 @@
 # Examples,
 # Enter on the command line of your terminal, the line
 #-----------------------------------
-# python3 -m scoop find_seq_element_occurrences_in_seq.py sequences.txt 1000
+# python3 find_seq_element_occurrences_in_seqTEST.py sequences.txt 1000
 
 
 
@@ -50,6 +55,10 @@
 #
 output_file_name_prefix = "../Output/Homo_sapiens/"
 
+id_of_seq_scanned_hardcoded = None # replace `None` with what you want to use,
+# with flanking quotes if something appropriate is not being extracted from the
+# provided filepath/filename or URL to save as an indicator of the file scanned
+# in the output file name. 
 
 limit_of_name = 17 # number of bases of the sequence element to limit to using 
 # if the sequence element sequence is used to make the name for the output file
@@ -78,12 +87,14 @@ limit_of_name = 17 # number of bases of the sequence element to limit to using
 import sys
 import os
 import re
+import regex
 import pandas as pd
+import rpy2.robjects as robjects
+from rpy2.robjects import pandas2ri
 from Bio import SeqIO
 from Bio.Seq import Seq # for reverse complement
-from scoop import shared
 
-
+pandas2ri.activate()
 
 ###---------------------------HELPER FUNCTIONS---------------------------------###
 
@@ -204,14 +215,18 @@ def search_strand(pattern, sequence_to_scan, chromosome, distance, strand=1):
     '''
 
     # Initiate empty list of results and empty temporary variables
-    occurrences = [(0, 0, 0, 0)]
+    occurrences = [(0, 0, 0, 0, 0)]
     
     start1 = int(0)   # Temp variable that will hold previous match start position
     end1 = int(0)     # Temp variable that will hold previous match end position
     dist = int(distance)
+    match1 = None
 
-    # For each part of sequence matching query, get start and end position
-    for match in re.finditer(pattern.upper(), str(sequence_to_scan.upper())):   
+
+    # For each part of sequence matching query (max 1 substitution), get start and end position
+    for match in regex.finditer("(" + str(pattern.upper()) + "){s<=1}", str(sequence_to_scan.upper())):
+        # print(len(occurrences.index))
+        # print("match: ", match)
         start_pos = match.start() + 1
         end_pos = match.end() + 1
 
@@ -222,17 +237,18 @@ def search_strand(pattern, sequence_to_scan, chromosome, distance, strand=1):
         # If not first match, check if it is <= given distance from previous match
         elif start_pos - start1 <= dist:
             # If previous match is not already in results list, append it
-            if start1 != occurrences[-1][1]:
-                occurrences.append((chromosome, start1, end1, strand))
+            if start1 != occurrences[-1][2]:
+                occurrences.append((match1, chromosome, start1, end1, strand))
                 if occurrences[-2][0] == 0:
-                    occurrences.remove((0, 0, 0, 0))
+                    occurrences.remove((0, 0, 0, 0, 0))
             # Append current match to results list
-            occurrences.append((chromosome, start_pos, end_pos, strand))
-            
+            occurrences.append((match.group(), chromosome, start_pos, end_pos, strand))
+
         # Set temp variables to current match
         start1 = start_pos
         end1 = end_pos
-        
+        match1 = match.group()
+    
     return occurrences
 
 ###--------------------------END OF HELPER FUNCTIONS---------------------------###
@@ -254,19 +270,23 @@ def find_sequence_element_occurrences_in_sequence(
     in a Jupyter notebook or importing it into another script.
     '''
 
-    # Set shared SCOOP constants
-    source = shared.getConst("source")
-    distance = shared.getConst("distance")
-
     # Get the fasta_seq to scan
     fasta_seq = get_fasta_seq(source)
-    
+    print(element)
 
     assert fasta_seq, (
     "The provided source of the FASTA-formatted sequence seems invalid. Is it "
     "FASTA format?")
 
-    #assert that element cannot be longer than fasta_seq
+    # With the approach in this next block, I can expose `id_of_seq_scanned` to 
+    # setting for advanced use without it being required and without need to be 
+    # passed into the function.
+    if id_of_seq_scanned_hardcoded:
+        id_of_seq_scanned = id_of_seq_scanned_hardcoded
+    else:
+        id_of_seq_scanned = extract_id_of_seq_scanned(source)
+
+    # Assert that element cannot be longer than fasta_seq
     assert len(element) < len(fasta_seq), (
     "the FASTA sequence has to be longer than the provided sequence element.\n"
     "The provided FASTA sequence, {0}, is {1} bases;\nthe provided sequence "
@@ -283,13 +303,10 @@ def find_sequence_element_occurrences_in_sequence(
             if occurrences:
                 # make it into a dataframe since provides convenient options for 
                 # handling
-                df = pd.DataFrame(occurrences, columns=['chromosome','start_pos','end_pos','strand'])
+                df = pd.DataFrame(occurrences, columns=['element', 'chromosome','start_pos','end_pos','strand'])
                 totRes+= len(df)
 
-                # add some useful information to the dataframe
-                df["element"] = element
-                df = df[['element','chromosome','start_pos','end_pos','strand']] # 'seq.element'
-                # column will show on far right otherwise
+                df_r = checkGene_r(df)
 
                 # write to tab-delimited table file
                 output_file_name = generate_output_file_name(
@@ -301,14 +318,14 @@ def find_sequence_element_occurrences_in_sequence(
                 resFile = os.path.isfile(output_file_name)
                 if resFile:
                     with open(output_file_name, 'a') as output:
-                        df.to_csv(output, sep='\t', index=False, header=False)
+                        df_r.to_csv(output, sep='\t', index=False, header=False)
                 else:
-                    df.to_csv(output_file_name, sep='\t',index = False)
-                    
+                    df_r.to_csv(output_file_name, sep='\t',index = False)
+
                 if return_dataframe:
                     print( "\n\nReturning a dataframe with the information "
                         "as well.")
-                    return df
+                    return df_r
             else:
                 # print( "\nNo occurrences of '{0}' "
                 #         "found in the provided sequence.".format(element))
@@ -316,6 +333,7 @@ def find_sequence_element_occurrences_in_sequence(
                     print( "\n\nNo data to return in a dataframe and so "
                         "returning `None`.")
                     return None
+
 
 
 ###--------------------------END OF MAIN FUNCTION----------------------------###
@@ -334,8 +352,9 @@ def find_sequence_element_occurrences_in_sequence(
 if __name__ == "__main__" and '__file__' in globals():
     """ This is executed when run from the command line """
        
-    from scoop import futures
-
+    import multiprocessing as mp
+  
+  
 ###-----------------for parsing command line arguments-----------------------###
     import argparse
 
@@ -368,10 +387,22 @@ if __name__ == "__main__" and '__file__' in globals():
     elements = file.read().splitlines()
 
 
-    # Set SCOOP shared variables
-    shared.setConst(source="../Genome_input/Homo_sapiens/genome.fa") # Homo_sapiens GChR38
-    shared.setConst(distance=args.distance)
+    # Load R function from "checkGene.R"
+    r = robjects.r
+    r['source']('./seqFind/checkGene.R')
+    checkGene_r = robjects.globalenv['checkGene']
 
+    # Define variables
+    source = "../Genome_input/Homo_sapiens/genome.fa" # Homo_sapiens GChR38
+    distance = args.distance
+
+    # obtain number of cores allocated to the job
+    ncore = len(os.sched_getaffinity(0))
+
+
+    # Making a pool object and set number of processes equal to number of cores
+    pool = mp.Pool(processes=ncore)
+    result = pool.map(find_sequence_element_occurrences_in_sequence, elements)
 
 
     import time
@@ -380,9 +411,9 @@ if __name__ == "__main__" and '__file__' in globals():
     start = time.time()
     
     # Parallelization function
-    list(futures.map(find_sequence_element_occurrences_in_sequence, elements))
+    # list(futures.map(find_sequence_element_occurrences_in_sequence, elements))
     end = time.time() 
-    print("\n\nRunning time: {} sec".format(round(end-start, 2)))
+    print("\n\nRunning time: {} sec".format(end-start))
     print("Memory used: {} kb".format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss))
 
 

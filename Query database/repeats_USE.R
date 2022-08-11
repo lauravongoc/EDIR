@@ -90,3 +90,8 @@ gaa10 <- gene_lookup("GAA", length = 10, mindist = 10, maxdist = 1000)
 acan10 <- gene_lookup("ACAN", length = 10, mindist = 10, maxdist = 1000, summary = T)
 head(acan10$summary)
 head(acan10$results)
+
+gaa7$feature <- ifelse(gaa7$feature=="same", "same exon", gaa7$feature)
+gaa7$feature <- ifelse(gaa7$feature=="spanning", "spanning intron-exon", gaa7$feature)
+
+write.table(gaa7, file="GAA_7bp_results.tsv", sep = "\t", quote = F)
