@@ -10,8 +10,6 @@ a coding sequence.
 
 ---
 ## EDIRquery package
-EDIRquery provides a tool to search for genes of interest within EDIR. 
-
 The package `EDIRquery` provides user-friendly tools to query
 this database for genes of interest.
 
@@ -19,12 +17,11 @@ this database for genes of interest.
 ### Dataset
 
 EDIR provides a dataset of pairwise repeat structures in which both sequences 
-are located within a maximum of 1000 bp from each other, and fulfill one of the 
-following selection criteria:
+are located within a maximum of 1000 bp from each other, differ by at most a 1-bp
+mismatch, and and fulfill one of the following selection criteria:
 
 -   \>= 1 repeat located in an exon
 -   Both repeats situated in different introns flanking one or more exons
--   Repeat sequences differ by at most 1-bp mismatch
 
 Example data provided includes a subset of the data for the gene GAA 
 (ENSG00000171298) on chromosome 17. 
@@ -106,4 +103,4 @@ This directory contains the main scripts and input used to generate the EDIR dat
 * [ insert citing information ]
 ---
 ## Contact
-DT Laura Vo Ngoc doan.vongoc@vub.be
+DT Laura Vo Ngoc: doan.vongoc@vub.be
