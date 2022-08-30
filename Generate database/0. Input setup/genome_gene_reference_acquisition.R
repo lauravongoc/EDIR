@@ -88,8 +88,7 @@ chr.data <- rbind(chr.data1, chr.data2, chr.data3, chr.data4)
 # Setup mart for gene symbols
 mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", 
               dataset = dataset, 
-              host = "www.ensembl.org",
-              ensemblRedirect = FALSE)
+              host = "https://www.ensembl.org")
 
 
 # Get gene symbols from Biomart
