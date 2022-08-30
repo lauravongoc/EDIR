@@ -48,7 +48,7 @@ and additional parameters:
 | length   | Repeat sequence length, must be between 7 and 20. If NA, results will include all available lengths in dataset for queried gene  | NA      |
 | mindist  | Minimum spacer distance (bp) between repeats        | 0       |
 | maxdist  | Maximum spacer distance (bp) between repeats                                                                                                      | 1000    |
-| summary  | Logical value indicating whether to store summary                                                                                                 | FALSE   |
+| summary  | Logical value indicating whether to store summary                                                                                               | FALSE   |
 | mismatch | Logical value indicating whether to allow 1 mismatch in sequence                                                                                  | TRUE    |
 | path     | String containing path to directory holding downloaded dataset files. If not provided (`path = NA`), example subset of data will be used | NA      |
 
@@ -86,7 +86,7 @@ head(results)
 ```
 ---
 ## Links
-- Full dataset download: 
+- Full dataset download: 10.5281/zenodo.7036055
 
 ---
 ## Generate database
