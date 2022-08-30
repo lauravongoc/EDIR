@@ -1,0 +1,7 @@
+EDIRquery v0.99.0
+===================
+
+Initial commit.
+
+Functions:
+    gene_lookup()
