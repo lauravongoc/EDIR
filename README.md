@@ -83,7 +83,10 @@ head(results)
 ```
 ---
 ## Links
-- Full dataset download: 10.5281/zenodo.6931226
+- Full dataset download: 
+  - https://osf.io/m3gvx/
+  - [Direct download](http://193.70.34.71/EDIR.tar.gz)
+
 
 ---
 ## Generate database
@@ -93,9 +96,9 @@ This directory contains the main scripts and input used to generate the EDIR dat
    * [UCSC Known canonical transcripts](http://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/)
    * Gene and transcript information from [BiomaRt](https://bioconductor.org/packages/release/bioc/html/biomaRt.html)
    * Filter minimal sequences required to obtain all permutations while allowing for 1-bp mismatch
-3. Scan genome for 7bp sequences, allowing for 1 mismatch and retaining results found in genes
-5. Annotate 7bp output with gene info
-6. Expand to 8-20bp
+3. Scan genome for 7 bp sequences, allowing for 1 mismatch and retaining results found in genes
+5. Annotate 7 bp output with gene info
+6. Expand to 8-20 bp
 7. Filter and reorganize data 
 
 ---
@@ -103,4 +106,4 @@ This directory contains the main scripts and input used to generate the EDIR dat
 * [ insert citing information ]
 ---
 ## Contact
-DT Laura Vo Ngoc: doan.vongoc@vub.be
+Laura DT Vo Ngoc: doan.vongoc@vub.be
